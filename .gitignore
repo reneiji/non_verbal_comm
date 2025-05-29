@@ -1,2 +1,11 @@
 raw_data/
+
+notebooks/Audio_Song_Actors_01-24
+
+notebooks/fixed-sample.wav
+notebooks/harvard.wav
+nervous.mp4
+speech_recog_realtime.ipynb
+speech_recog_test.ipynb
+speech_recog.ipynb
 .DS_Store
