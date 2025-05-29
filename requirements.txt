@@ -8,7 +8,7 @@ numpy
 matplotlib
 seaborn
 librosa
-parselmouth
+praat-parselmouth
 fer
 joblib
 deepface
