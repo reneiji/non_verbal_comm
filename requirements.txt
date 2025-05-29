@@ -6,3 +6,14 @@ scikit-learn
 pandas
 numpy
 matplotlib
+seaborn
+librosa
+parselmouth
+fer
+joblib
+deepface
+torch
+torchvision
+Pillow
+datasets
+kagglehub
