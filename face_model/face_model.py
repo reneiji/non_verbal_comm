@@ -185,3 +185,4 @@ def analyze_video(model_conf, model_emot=model_emot, use_deepface=False,
     print("\nTop 3 Dominant Emotions:")
     for emotion, pct in emotion_summary.items():
         print(f"{emotion}: {pct:.2f}%")
+    return confidence_pct, emotion_summary
