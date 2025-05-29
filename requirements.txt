@@ -1,0 +1,8 @@
+streamlit>=1.32
+opencv-python
+mediapipe
+moviepy
+scikit-learn
+pandas
+numpy
+matplotlib
