@@ -58,7 +58,7 @@ transform_emot = transforms.Compose([
 
 # Function to analyze video for emotion and confidence detection, define video_path to upload a video file
 # if not provided, it will use webcam
-def analyze_video(model_conf, model_emot=model_emot, use_deepface=False,
+def analyze_video(model_conf=model_conf, model_emot=model_emot, use_deepface=False,
                   video_path=None, device=device):
 
     is_live = video_path is None
@@ -185,3 +185,4 @@ def analyze_video(model_conf, model_emot=model_emot, use_deepface=False,
     print("\nTop 3 Dominant Emotions:")
     for emotion, pct in emotion_summary.items():
         print(f"{emotion}: {pct:.2f}%")
+    return confidence_pct, emotion_summary
