@@ -9,7 +9,7 @@ from fer import FER
 import os
 import time
 
-from model.model import extract_features
+from speech_model.model import extract_features
 
 
 model = joblib.load('model/trained_model_combined.joblib')  # Load your pre-trained model
