@@ -8,12 +8,19 @@ import parselmouth
 from fer import FER
 import os
 import time
+import matplotlib.pyplot as plt
+import plotly.express as px
+import pandas as pd
 
-from model.model import extract_features
 
+from speech_model.model import extract_features
+from face_model.face_model import analyze_video
+from body_language_mod.body_model import init_model as init_body_model, analyze_video as analyze_body_video
 
-model = joblib.load('model/trained_model_combined.joblib')  # Load your pre-trained model
-le = joblib.load('model/label_encoder.joblib')  # Load your label encoder
+body_model = init_body_model()
+
+model = joblib.load('speech_model/trained_model_combined.joblib')  # Load your pre-trained model
+le = joblib.load('speech_model/label_encoder.joblib')  # Load your label encoder
 
 
 # Helper function for audio extraction from video
@@ -158,6 +165,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# Streamlit frontend starts here: 
 
 st.title("Confidence Score from Video")
 
@@ -210,14 +218,137 @@ if video_file:
         # Display the result
         progress_bar.progress(100)  # 100% progress when the score is ready
         st.markdown(f"<h3 style='color:red;'>Speech Confidence Score: {confidence_score:.2f}</h3>", unsafe_allow_html=True)
+        # Build DataFrame for pie chart
+        speech_emotion_df = pd.DataFrame({
+            'Emotion': emotion_labels,
+            'Probability': probas[0]
+        })
+        #filter out disgust
+        speech_emotion_df = speech_emotion_df[speech_emotion_df['Emotion'] != 'disgust']
+
+
+        # Create pie chart
+        fig_speech = px.pie(speech_emotion_df,
+                            names='Emotion',
+                            values='Probability',
+                            color_discrete_sequence=px.colors.sequential.RdBu,
+                            title="Detected Emotions (Speech Model)")
+
+        fig_speech.update_traces(textposition='inside', textinfo='percent+label')
+
+        # Show in Streamlit
+        st.plotly_chart(fig_speech, use_container_width=True)
         
-            # Add a button to show probabilities
-        if st.button("Show Emotion Probabilities"):
-            # Display the probabilities of each emotion
+        
+        # Add a button to show probabilities
+        # Initialize toggle state for speech model probabilities
+        if "show_probs_speech" not in st.session_state:
+            st.session_state.show_probs_speech = False
+
+        # Toggle button
+        if st.button("Show/Hide Details", key="speech_toggle"):
+            st.session_state.show_probs_speech = not st.session_state.show_probs_speech
+
+        # Conditionally display
+        if st.session_state.show_probs_speech:
             st.write("\nProbabilities for each emotion:")
             for label, prob in zip(le.classes_, probas[0]):
                 st.write(f"{label.capitalize()}: {prob:.2f}")
+        
+        # Run Face Model Analysis
+        st.write("Running face model analysis...")
+        face_conf_pct, face_emotion_summary = analyze_video(video_path=video_path)
+
+        # Display face model results
+        st.markdown(f"<h3 style='color:blue;'>Facial Confidence Score: {face_conf_pct:.2f}</h3>", unsafe_allow_html=True)
+
+        # Add pie chart for top emotions
+        # After face_emotion_summary is ready:
+        if face_emotion_summary:
+            labels = list(face_emotion_summary.keys())
+            sizes = list(face_emotion_summary.values())
+
+            # Create dataframe for Plotly
+            import pandas as pd
+            df_emotions = pd.DataFrame({
+                'Emotion': labels,
+                'Percentage': sizes
+            })
+
+            # Create pie chart with Plotly
+            fig = px.pie(df_emotions,
+                        names='Emotion',
+                        values='Percentage',
+                        color_discrete_sequence=px.colors.sequential.RdBu,
+                        title="Top 3 Detected Emotions (Face Model)")
+
+            fig.update_traces(textposition='inside', textinfo='percent+label')
+
+            # Show in Streamlit
+            st.plotly_chart(fig, use_container_width=True)
                 
+       # Initialize toggle state for face model emotions
+        if "show_probs_face" not in st.session_state:
+            st.session_state.show_probs_face = False
+
+        # Toggle button
+        if st.button("Show/Hide Details", key="face_toggle"):
+            st.session_state.show_probs_face = not st.session_state.show_probs_face
+
+        # Conditionally display
+        if st.session_state.show_probs_face:
+            st.write("\nTop Emotions:")
+            for emotion, pct in face_emotion_summary.items():
+                st.write(f"{emotion}: {pct:.2f}%")
+                
+                
+        # Run Body Model Analysis
+        st.write("Running body model analysis...")
+        body_scores = analyze_body_video(video_path=video_path, model=body_model)
+
+        # Display Body Language Score
+        if body_scores and "Overall Body Language Score" in body_scores:
+            st.markdown(f"<h3 style='color:green;'>Body Language Confidence Score: {body_scores['Overall Body Language Score']:.1f} </h3>", unsafe_allow_html=True)
+        else:
+            st.write("No valid body landmarks detected.")
+        
+        # Prepare data → exclude "Overall Body Language Score"
+        body_scores_filtered = {k: v for k, v in body_scores.items() if k != "Overall Body Language Score"}
+
+        # Convert to DataFrame
+        body_scores_df = pd.DataFrame({
+            'Metric': list(body_scores_filtered.keys()),
+            'Score': list(body_scores_filtered.values())
+        })
+
+        # Create bar chart
+        fig_body = px.bar(body_scores_df,
+                        x='Metric',
+                        y='Score',
+                        color='Score',
+                        color_continuous_scale='RdBu',
+                        title="Detailed Body Language Scores",
+                        text='Score')
+
+        fig_body.update_layout(xaxis_title="", yaxis_range=[0, 100])  # Scores are on 0-10 scale
+
+        # Show in Streamlit
+        st.plotly_chart(fig_body, use_container_width=True)
+
+        # Toggle for detailed body scores
+        if "show_body_scores" not in st.session_state:
+            st.session_state.show_body_scores = False
+
+        if st.button("Show/Hide Detailed Body Language Scores"):
+            st.session_state.show_body_scores = not st.session_state.show_body_scores
+
+        if st.session_state.show_body_scores and body_scores:
+            st.write("Detailed Body Language Scores:")
+            for k, v in body_scores.items():
+                if k != "Overall Body Language Score":
+                    st.write(f"{k}: {v:.1f}")
+                        
+       
     else:
         st.write("No visual emotion detected in the video.")
         progress_bar.progress(100)  # 100% progress even if no visual emotion detected
