@@ -105,7 +105,7 @@ matplotlib==3.10.3
 matplotlib-inline==0.1.7
 mccabe==0.7.0
 mdurl==0.1.2
-mediapipe==0.10.21
+mediapipe==0.10.18
 mistune==3.1.3
 ml_dtypes==0.5.1
 moviepy==1.0.3
@@ -139,7 +139,6 @@ platformdirs==4.3.8
 plotly==6.1.2
 pluggy==1.6.0
 pooch==1.8.2
-praat-parselmouth==0.4.5
 proglog==0.1.12
 prometheus_client==0.22.0
 prompt_toolkit==3.0.51
