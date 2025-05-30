@@ -14,6 +14,8 @@ from torchvision.transforms import ToTensor, Normalize, Resize, Compose, Graysca
 from PIL import Image
 from collections import Counter
 
+print("=== Starting face_model.py ===")
+
 if torch.cuda.is_available():
     device = torch.device('cuda')
 elif torch.backends.mps.is_available():
@@ -68,7 +70,7 @@ def analyze_video(model_conf=model_conf, model_emot=model_emot, use_deepface=Fal
     face_detection = mp_face_detection.FaceDetection(min_detection_confidence=0.6)
 
     # Video capture: webcam (0) or file path
-    cap = cv2.VideoCapture(0) if is_live else cv2.VideoCapture(video_path)
+    cap = cv2.VideoCapture(1) if is_live else cv2.VideoCapture(video_path)
     fps = cap.get(cv2.CAP_PROP_FPS)
     if fps == 0 or np.isnan(fps):
         fps = 30
@@ -186,3 +188,9 @@ def analyze_video(model_conf=model_conf, model_emot=model_emot, use_deepface=Fal
     for emotion, pct in emotion_summary.items():
         print(f"{emotion}: {pct:.2f}%")
     return confidence_pct, emotion_summary
+
+
+# === THIS GOES AT BOTTOM of face_model.py ===
+if __name__ == "__main__":
+    print("=== Starting live webcam detection ===")
+    analyze_video()

@@ -7,18 +7,68 @@ import numpy as np
 import parselmouth
 from fer import FER
 import os
-import time
-import matplotlib.pyplot as plt
 import plotly.express as px
 import pandas as pd
+import subprocess
+import sys
 
 
 from speech_model.model import extract_features
 from face_model.face_model import analyze_video
 from body_language_mod.body_model import init_model as init_body_model, analyze_video as analyze_body_video
 
-body_model = init_body_model()
+st.markdown("""
+    <style>
 
+    /* ===== GLOBAL FONT ===== */
+    html, body, [class*="css"] {
+        font-family: 'Arial', sans-serif;
+        font-size: 18px;
+    }
+
+    /* ===== FILE UPLOADER ===== */
+    div.stFileUploader label div {
+        font-size: 24px !important;
+        font-weight: bold !important;
+        color: #d62828 !important;  /* deep red */
+        padding-bottom: 10px;
+    }
+
+    /* ===== SECTION TITLES ===== */
+    h3 {
+        font-size: 26px;
+        font-weight: bold;
+        margin-top: 20px;
+        margin-bottom: 10px;
+    }
+
+    /* ===== CUSTOM COLORS ===== */
+    /* Speech Score */
+    .speech-score h3 {
+        color: #F25C05;  /* orange */
+    }
+
+    /* Face Score */
+    .face-score h3 {
+        color: #0077b6;  /* blue */
+    }
+
+    /* Body Score */
+    .body-score h3 {
+        color: #2a9d8f;  /* green */
+    }
+
+    /* ===== BUTTONS ===== */
+    button[kind="secondary"] {
+        font-size: 18px;
+        font-weight: bold;
+    }
+
+    </style>
+""", unsafe_allow_html=True)
+
+
+body_model = init_body_model()
 model = joblib.load('speech_model/trained_model_combined.joblib')  # Load your pre-trained model
 le = joblib.load('speech_model/label_encoder.joblib')  # Load your label encoder
 
@@ -154,23 +204,13 @@ def calculate_confidence_score(model, le, audio_file_path):
     return final_confidence_score, probas, emotion_labels
 
 # Streamlit UI setup for video upload
-st.markdown("""
-    <style>
-        /* This targets the label of the file uploader specifically */
-        div.stFileUploader label {
-            font-size: 32px !important;  /* Make the font larger */
-            font-weight: bold !important;  /* Make the font bold */
-            color: red !important;  /* Change the font color to red */
-        }
-    </style>
-""", unsafe_allow_html=True)
 
 # Streamlit frontend starts here: 
 
 st.title("Confidence Score from Video")
 
 # Upload video file
-video_file = st.file_uploader("Upload a video file", type=["mp4"])
+video_file = st.file_uploader("Upload a video file:", type=["mp4"])
 
 if video_file:
     # Save the uploaded video to disk
@@ -217,7 +257,7 @@ if video_file:
 
         # Display the result
         progress_bar.progress(100)  # 100% progress when the score is ready
-        st.markdown(f"<h3 style='color:red;'>Speech Confidence Score: {confidence_score:.2f}</h3>", unsafe_allow_html=True)
+        st.markdown(f"<div class='speech-score'><h3>Speech Confidence Score: {confidence_score:.2f}</h3>", unsafe_allow_html=True)
         # Build DataFrame for pie chart
         speech_emotion_df = pd.DataFrame({
             'Emotion': emotion_labels,
@@ -256,12 +296,17 @@ if video_file:
                 st.write(f"{label.capitalize()}: {prob:.2f}")
         
         # Run Face Model Analysis
-        st.write("Running face model analysis...")
-        face_conf_pct, face_emotion_summary = analyze_video(video_path=video_path)
+        with st.spinner("Analyzing facial expressions..."):
+            face_conf_pct, face_emotion_summary = analyze_video(video_path=video_path)
 
         # Display face model results
-        st.markdown(f"<h3 style='color:blue;'>Facial Confidence Score: {face_conf_pct:.2f}</h3>", unsafe_allow_html=True)
+        st.markdown(f"<div class='face-score'><h3>Facial Confidence Score: {face_conf_pct:.2f}</h3></div>", unsafe_allow_html=True)
 
+        # Absolute path to your project
+        project_path = os.path.abspath(".")
+        face_model_script = os.path.join(project_path, "face_model/face_model.py")
+
+                    
         # Add pie chart for top emotions
         # After face_emotion_summary is ready:
         if face_emotion_summary:
@@ -301,14 +346,34 @@ if video_file:
             for emotion, pct in face_emotion_summary.items():
                 st.write(f"{emotion}: {pct:.2f}%")
                 
+        # Path to venv
+        # Auto detect venv activate path (pyenv safe)
+        venv_activate = os.path.join(os.path.dirname(sys.executable), "activate")
+
+        # Project + script path
+        project_path = os.path.abspath(".")
+        face_model_script = os.path.join(project_path, "face_model/face_model.py")
+
+        # Build command
+        command = f'source {venv_activate} && python {face_model_script}'
+
+        # Build osascript AppleScript command
+        osa_command = f'''osascript -e 'tell application "Terminal" to do script "cd {project_path} && {command}"' '''
+
+        # Launch button
+        if st.button("Try Live Webcam Face Detection"):
+            st.info("Launching webcam in new Terminal window... Close webcam window to return to app.")
+            subprocess.Popen(osa_command, shell=True)
+
+                        
                 
         # Run Body Model Analysis
-        st.write("Running body model analysis...")
-        body_scores = analyze_body_video(video_path=video_path, model=body_model)
+        with st.spinner("Analyzing body language..."):
+            body_scores = analyze_body_video(video_path=video_path, model=body_model)
 
         # Display Body Language Score
         if body_scores and "Overall Body Language Score" in body_scores:
-            st.markdown(f"<h3 style='color:green;'>Body Language Confidence Score: {body_scores['Overall Body Language Score']:.1f} </h3>", unsafe_allow_html=True)
+            st.markdown(f"<div class='body-score'><h3>Body Language Confidence Score: {body_scores['Overall Body Language Score']:.1f}</h3></div>", unsafe_allow_html=True)
         else:
             st.write("No valid body landmarks detected.")
         
@@ -343,7 +408,7 @@ if video_file:
             st.session_state.show_body_scores = not st.session_state.show_body_scores
 
         if st.session_state.show_body_scores and body_scores:
-            st.write("Detailed Body Language Scores:")
+            st.write("Body Language Scores:")
             for k, v in body_scores.items():
                 if k != "Overall Body Language Score":
                     st.write(f"{k}: {v:.1f}")
