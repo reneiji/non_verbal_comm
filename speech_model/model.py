@@ -89,8 +89,8 @@ def train_model(X, y):
     print(classification_report(y_test, y_pred, target_names=le.classes_))
     
     # Save the trained model and the label encoder using joblib
-    joblib.dump(model, 'model/trained_model_combined.joblib')  # Save the model
-    joblib.dump(le, 'model/label_encoder.joblib')  # Save the label encoder
+    joblib.dump(model, 'speech_model/trained_model_combined.joblib')  # Save the model
+    joblib.dump(le, 'speech_model/label_encoder.joblib')  # Save the label encoder
 
     print("Model and label encoder saved successfully.")
     
