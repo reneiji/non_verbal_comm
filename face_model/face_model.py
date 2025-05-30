@@ -70,7 +70,15 @@ def analyze_video(model_conf=model_conf, model_emot=model_emot, use_deepface=Fal
     face_detection = mp_face_detection.FaceDetection(min_detection_confidence=0.6)
 
     # Video capture: webcam (0) or file path
-    cap = cv2.VideoCapture(1) if is_live else cv2.VideoCapture(video_path)
+    def get_working_camera():
+        for i in range(3):
+            cap = cv2.VideoCapture(i)
+            if cap.isOpened():
+                print(f"Using camera {i} for live detection.")
+                return cap
+        cap.release()
+        raise RuntimeError("No working camera found.")
+    cap = get_working_camera() if is_live else cv2.VideoCapture(video_path)
     fps = cap.get(cv2.CAP_PROP_FPS)
     if fps == 0 or np.isnan(fps):
         fps = 30
