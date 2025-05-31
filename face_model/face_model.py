@@ -11,6 +11,7 @@ import time
 from torch.utils.data import Dataset, DataLoader, Subset
 from torchvision import transforms, models
 from torchvision.transforms import ToTensor, Normalize, Resize, Compose, Grayscale
+import torch.nn.functional as F
 from PIL import Image
 from collections import Counter
 
@@ -46,22 +47,22 @@ model_emot.eval()
 # Define transforms
 transform_conf = transforms.Compose([
         transforms.Grayscale(num_output_channels=3),  # Convert to 3-channel grayscale RGB
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+        transforms.Resize((224, 224)),  # Resizes pixels to 224x224
+        transforms.ToTensor(),       # Conveert to pytorch Tensor in [0, 1] float
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]) # Normalization for ImageNet dataset
 ])
 
 transform_emot = transforms.Compose([
         transforms.Grayscale(num_output_channels=3),  # Convert to 3-channel grayscale RGB
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
-        transforms.Normalize([0.5], [0.5])  # adjust if needed
+        transforms.Normalize([0.5], [0.5])  # general purpose normalization with mean=0.5 and std=0.5
 ])
 
 # Function to analyze video for emotion and confidence detection, define video_path to upload a video file
 # if not provided, it will use webcam
-def analyze_video(model_conf=model_conf, model_emot=model_emot, use_deepface=False,
-                  video_path=None, device=device):
+def analyze_video(model_conf=model_conf, model_emot=model_emot, emot_conf_thresh = 0.65,
+                use_deepface=False, video_path=None, device=device):
 
     is_live = video_path is None
 
@@ -135,7 +136,12 @@ def analyze_video(model_conf=model_conf, model_emot=model_emot, use_deepface=Fal
                     else:
                         input_tensor_emot = transform_emot(pil_face_rgb).unsqueeze(0).to(device).float()
                         output = model_emot(input_tensor_emot)
-                        _, pred = torch.max(output, 1)
+                        # Get probability of emotion labeling
+                        probabilities = F.softmax(output, dim=1)
+                        confidence, pred = torch.max(probabilities, 1)
+                        if confidence < emot_conf_thresh:
+                            # If the confidence is below threshold label as neutral face
+                            pred = torch.tensor([6], device=output.device)
                         dominant_emotion = label_map[pred.item()]
                     emotion_counter[dominant_emotion] += 1
 

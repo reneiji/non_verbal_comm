@@ -1,22 +1,25 @@
-FROM python:3.12-slim
-
-RUN apt-get update && \
-    apt-get install -y \
-		praat \
-		libx11-dev \
-		cmake \
-		build-essential
-
+FROM python:3.10.6-slim
 
 WORKDIR /app
 
-COPY . /app
-COPY requirements.txt /requirements.txt
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt /app/requirements.txt
+
 
 RUN pip install --upgrade pip
-RUN pip install --no-cache-dir praat-parselmouth
+
+RUN pip install --only-binary=praat-parselmouth praat-parselmouth || \
+    pip install praat-parselmouth
+
 RUN pip install -r requirements.txt
+
+COPY . /app
 
 EXPOSE 8000
 
-CMD ["streamlit", "run", "app/app.py", "--host", "0.0.0.0"]
+CMD ["streamlit", "run", "app/app.py", "--server.address", "0.0.0.0", "--server.port", "8000"]
