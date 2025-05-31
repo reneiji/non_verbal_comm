@@ -10,4 +10,10 @@ speech_recog_test.ipynb
 speech_recog.ipynb
 .DS_Store
 
+__pycache__/
+*.pycs
+.ipynb_checkpoints
+=======
+
 *.wav
+
