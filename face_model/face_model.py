@@ -61,8 +61,8 @@ transform_emot = transforms.Compose([
 
 # Function to analyze video for emotion and confidence detection, define video_path to upload a video file
 # if not provided, it will use webcam
-def analyze_video(model_conf=model_conf, model_emot=model_emot, emot_conf_thresh = 0.65,
-                use_deepface=False, video_path=None, device=device):
+def analyze_video(model_conf=model_conf, model_emot=model_emot, emot_thresh = 0.68,
+                conf_thresh = 0.6, use_deepface=False, video_path=None, device=device):
 
     is_live = video_path is None
 
@@ -139,7 +139,7 @@ def analyze_video(model_conf=model_conf, model_emot=model_emot, emot_conf_thresh
                         # Get probability of emotion labeling
                         probabilities = F.softmax(output, dim=1)
                         confidence, pred = torch.max(probabilities, 1)
-                        if confidence < emot_conf_thresh:
+                        if confidence < emot_thresh:
                             # If the confidence is below threshold label as neutral face
                             pred = torch.tensor([6], device=output.device)
                         dominant_emotion = label_map[pred.item()]
@@ -149,7 +149,14 @@ def analyze_video(model_conf=model_conf, model_emot=model_emot, emot_conf_thresh
                     pil_face = Image.fromarray(cv2.cvtColor(face_img, cv2.COLOR_BGR2RGB))
                     input_tensor_conf = transform_conf(pil_face).unsqueeze(0).to(device).float()
                     output_conf = model_conf(input_tensor_conf)
-                    _, pred_conf = torch.max(output_conf, 1)
+                    prob_conf = torch.softmax(output_conf, dim=1)
+                    prob_class_1 = prob_conf[0,1]
+
+                    if prob_class_1 > conf_thresh:
+                        pred_conf = torch.tensor([1], device=output_conf.device)
+
+                    else:
+                        pred_conf = torch.tensor([0], device=output_conf.device)
 
                     if pred_conf.item() == 0:
                         total_confident += 1
