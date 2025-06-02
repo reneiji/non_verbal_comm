@@ -17,3 +17,4 @@ __pycache__/
 =======
 
 *.wav
+face_model/__pycache__/face_model.cpython-310.pyc
