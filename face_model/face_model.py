@@ -61,7 +61,7 @@ transform_emot = transforms.Compose([
 
 # Function to analyze video for emotion and confidence detection, define video_path to upload a video file
 # if not provided, it will use webcam
-def analyze_video(model_conf=model_conf, model_emot=model_emot, emot_thresh = 0.65,
+def analyze_video(model_conf=model_conf, model_emot=model_emot, emot_thresh = 0.68,
                 conf_thresh = 0.6, use_deepface=False, video_path=None, device=device):
 
     is_live = video_path is None
@@ -149,7 +149,8 @@ def analyze_video(model_conf=model_conf, model_emot=model_emot, emot_thresh = 0.
                     pil_face = Image.fromarray(cv2.cvtColor(face_img, cv2.COLOR_BGR2RGB))
                     input_tensor_conf = transform_conf(pil_face).unsqueeze(0).to(device).float()
                     output_conf = model_conf(input_tensor_conf)
-                    prob_class_1 = torch.sigmoid(output_conf)
+                    prob_conf = torch.softmax(output_conf, dim=1)
+                    prob_class_1 = prob_conf[0,1]
 
                     if prob_class_1 > conf_thresh:
                         pred_conf = torch.tensor([1], device=output_conf.device)
