@@ -14,8 +14,8 @@ COPY requirements.txt /app/requirements.txt
 
 RUN pip install --upgrade pip
 
-RUN pip install --only-binary=praat-parselmouth praat-parselmouth || \
-    pip install praat-parselmouth
+# RUN pip install --only-binary=praat-parselmouth praat-parselmouth || \
+#     pip install praat-parselmouth
 
 RUN pip install -r requirements.txt
 
@@ -23,4 +23,4 @@ COPY . /app
 
 EXPOSE 8000
 
-CMD ["streamlit", "run", "app/app.py", "--server.address", "0.0.0.0", "--server.port", "8000"]
+CMD ["streamlit", "run", "app.py", "--server.address", "0.0.0.0", "--server.port", "8000"]
