@@ -204,7 +204,7 @@ toml==0.10.2
 tomli==2.2.1
 tomlkit==0.13.2
 torch==2.2.2
-torchaudio==0.13.0
+torchaudio==2.2.2
 torchvision==0.17.2
 tornado==6.5.1
 tqdm==4.67.1
