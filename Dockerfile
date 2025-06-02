@@ -14,8 +14,8 @@ COPY requirements.txt /app/requirements.txt
 
 RUN pip install --upgrade pip
 
-# RUN pip install --only-binary=praat-parselmouth praat-parselmouth || \
-#     pip install praat-parselmouth
+RUN pip install --only-binary=praat-parselmouth praat-parselmouth || \
+    pip install praat-parselmouth
 
 RUN pip install -r requirements.txt
 
