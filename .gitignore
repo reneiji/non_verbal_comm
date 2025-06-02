@@ -11,9 +11,9 @@ speech_recog.ipynb
 .DS_Store
 
 __pycache__/
+/__pycache__/
 *.pycs
 .ipynb_checkpoints
 =======
 
 *.wav
-
