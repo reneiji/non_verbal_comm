@@ -13,7 +13,8 @@ opencv-python-headless>=4.9
 mediapipe>=0.10
 Pillow>=10.3
 deepface>=0.0.79
-fer>=23.0
+fer>=22.5.1
 torch>=2.2
 torchvision>=0.17
 tqdm>=4.66
+moviepy==1.0.3
