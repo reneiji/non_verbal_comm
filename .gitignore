@@ -1,7 +1,5 @@
 raw_data/
-
 notebooks/Audio_Song_Actors_01-24
-
 notebooks/fixed-sample.wav
 notebooks/harvard.wav
 nervous.mp4
@@ -11,10 +9,8 @@ speech_recog.ipynb
 .DS_Store
 
 __pycache__/
-/__pycache__/
-*.pycs
+face_model/__pycache__/
+*.pyc
 .ipynb_checkpoints
-=======
-
 *.wav
 face_model/__pycache__/face_model.cpython-310.pyc
