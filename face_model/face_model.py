@@ -122,6 +122,9 @@ def analyze_video(model_conf=model_conf, model_emot=model_emot, emot_thresh = 0.
                 y1 = int(bbox.ymin * h)
                 x2 = x1 + int(bbox.width * w)
                 y2 = y1 + int(bbox.height * h)
+                forehead_offset = int(0.15 * (y2 - y1))
+                y1 = max(0, y1 - forehead_offset)
+                y2 = min(h, y2)
 
                 face_img = frame[max(0, y1):min(h, y2), max(0, x1):min(w, x2)]
                 pil_face_rgb = Image.fromarray(cv2.cvtColor(face_img, cv2.COLOR_BGR2RGB))
@@ -211,7 +214,94 @@ def analyze_video(model_conf=model_conf, model_emot=model_emot, emot_thresh = 0.
     return confidence_pct, emotion_summary
 
 
+def predict_face_labels(frame, model_conf=model_conf, model_emot=model_emot, transform_conf=transform_conf, transform_emot=transform_emot, device=device):
+
+    # Setup Mediapipe face detection
+    mp_face_detection = mp.solutions.face_detection
+    face_detection = mp_face_detection.FaceDetection(min_detection_confidence=0.6)
+    label_map = {
+    0: 'angry', 1: 'disgust', 2: 'fear', 3: 'happy',
+    4: 'sad', 5: 'surprise', 6: 'neutral'
+    }
+
+    # Convert image to RGB for MediaPipe
+    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    results = face_detection.process(rgb)
+
+    output_frame = frame.copy()
+
+    if results.detections:
+        detection = results.detections[0]
+        bbox = detection.location_data.relative_bounding_box
+        h, w, _ = frame.shape
+
+        x1 = int(bbox.xmin * w)
+        y1 = int(bbox.ymin * h)
+        x2 = x1 + int(bbox.width * w)
+        y2 = y1 + int(bbox.height * h)
+
+        # Adjust y1 to include forehead
+        forehead_offset = int(0.15 * (y2 - y1))
+        y1 = max(0, y1 - forehead_offset)
+        x1 = max(0, x1)
+        x2 = min(w, x2)
+        y2 = min(h, y2)
+
+        # Extract and preprocess face
+        face_img = frame[y1:y2, x1:x2]
+        face_pil = Image.fromarray(cv2.cvtColor(face_img, cv2.COLOR_BGR2RGB))
+
+        # Confidence prediction
+        face_conf = transform_conf(face_pil).unsqueeze(0).to(device)
+        with torch.no_grad():
+            conf_output = model_conf(face_conf)
+            conf_pred = torch.argmax(conf_output, dim=1).item()
+            conf_label = 'Confident' if conf_pred == 0 else 'Unconfident'
+
+        # Emotion prediction
+        face_emot = transform_emot(face_pil).unsqueeze(0).to(device)
+        with torch.no_grad():
+            emot_output = model_emot(face_emot)
+            probs = F.softmax(emot_output, dim=1)
+            emot_pred = torch.argmax(emot_output, dim=1).item()
+            emot_label = label_map[emot_pred]
+            emot_confidence = probs[0][emot_pred].item() * 100
+
+
+        # Compute face height to scale font size
+        face_height = y2 - y1
+        font_scale = max(0.5, face_height / 200.0)       # scale text based on face height
+        thickness = max(1, int(face_height / 100.0))     # line/text thickness
+        # Split label into two lines
+        line1 = conf_label
+        line2 = f'{emot_label}' # Add ({emot_confidence:.1f}%) to the print statement to add emotion confidence score
+
+        # Get text sizes
+        (w1, h1), _ = cv2.getTextSize(line1, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
+        (w2, h2), _ = cv2.getTextSize(line2, cv2.FONT_HERSHEY_SIMPLEX, font_scale, thickness)
+
+        # Choose max width and total height
+        total_width = max(w1, w2)
+        total_height = h1 + h2 + 10  # 10px spacing between lines
+
+        # Starting position for top line
+        text_x = x1
+        text_y = max(20, y1 - total_height)
+
+        # Adjust x if label would overflow the right side
+        if text_x + total_width > frame.shape[1]:
+            text_x = frame.shape[1] - total_width - 5
+
+        cv2.rectangle(output_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        # Draw each line separately
+        cv2.putText(output_frame, line1, (text_x, text_y),
+                    cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 255, 0), thickness)
+        cv2.putText(output_frame, line2, (text_x, text_y + h2 + 5),
+                    cv2.FONT_HERSHEY_SIMPLEX, font_scale, (0, 255, 0), thickness)
+    return output_frame
+
 # === THIS GOES AT BOTTOM of face_model.py ===
 if __name__ == "__main__":
     print("=== Starting live webcam detection ===")
     analyze_video()
+    predict_face_labels()
